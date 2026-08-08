@@ -368,6 +368,8 @@
           <div class="panel actionBar">
             <button class="primary" id="downloadExcel" type="button">Download Excel</button>
             <button class="secondary" id="refreshAdmin" type="button">Refresh</button>
+            <button class="secondary" id="testSound" type="button">Test Sound</button>
+            <button class="secondary" id="testEmail" type="button">Test Email</button>
             <button class="danger" id="clearAllAttendance" type="button">Clear All Attendance</button>
             <span id="adminStatus">Attendance loaded.</span>
           </div>
@@ -514,6 +516,15 @@
         speakMessage(`New ${label} request from ${request.name}`);
       }
 
+      function testAdminSound() {
+        unlockApprovalSound();
+        playDoneSound();
+        setTimeout(playDoneSound, 450);
+        if (navigator.vibrate) navigator.vibrate([250, 120, 250]);
+        speakMessage("Attendance notification sound test");
+        document.getElementById("adminStatus").textContent = "Sound test chal gaya.";
+      }
+
       function notifyEmployeeDecision(entry) {
         playDoneSound();
         setTimeout(playDoneSound, 450);
@@ -618,7 +629,8 @@
             return;
           }
           playDoneSound();
-          setMessage(`${data.employee.name} ki ${dateKey(selectedDay)} ${statusLabels[status]} request CMO approval ke liye pending hai.`);
+          const emailNote = data.email?.sent === false ? ` Email nahi gaya: ${data.email.error}` : " Email notification sent.";
+          setMessage(`${data.employee.name} ki ${dateKey(selectedDay)} ${statusLabels[status]} request CMO approval ke liye pending hai.${emailNote}`);
           await refreshEmployeeStatus(false);
         } catch (error) {
           setMessage(error.message);
@@ -712,6 +724,13 @@
         adminSeenPendingKeys = new Set();
         await loadAdminData(false);
         document.getElementById("adminStatus").textContent = data.message || "Attendance clear ho gayi.";
+      }
+
+      async function sendTestEmail() {
+        const adminPin = document.getElementById("adminPin").value.trim();
+        document.getElementById("adminStatus").textContent = "Sending test email...";
+        const data = await callApi({ action: "testEmail", adminPin });
+        document.getElementById("adminStatus").textContent = data.ok ? data.message : (data.error || "Test email nahi gaya.");
       }
 
       function entryText(entry) {
@@ -875,6 +894,8 @@
       document.getElementById("loadAdmin").addEventListener("click", () => loadAdminData(false));
       document.getElementById("refreshAdmin").addEventListener("click", () => loadAdminData(false));
       document.getElementById("downloadExcel").addEventListener("click", downloadXls);
+      document.getElementById("testSound").addEventListener("click", testAdminSound);
+      document.getElementById("testEmail").addEventListener("click", sendTestEmail);
       document.getElementById("clearAllAttendance").addEventListener("click", clearAllAttendance);
       renderDays();
     </script>

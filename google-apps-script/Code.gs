@@ -58,6 +58,7 @@ function doGet(e) {
     else if (action === "approve") result = review_(params.adminPin, params.targetPin, params.date, "Approved");
     else if (action === "cancel") result = review_(params.adminPin, params.targetPin, params.date, "Cancelled");
     else if (action === "clearAll") result = clearAll_(params.adminPin, params.confirm);
+    else if (action === "testEmail") result = testEmail_(params.adminPin);
     else result = { ok: false, error: "Action valid nahi hai." };
   } catch (error) {
     result = { ok: false, error: String(error && error.message ? error.message : error) };
@@ -165,8 +166,8 @@ function save_(pin, date, status) {
     sheet.appendRow(row);
   }
 
-  sendRequestEmail_(employee, date, status);
-  return { ok: true, employee: publicEmployee_(employee), date, status, approval, message: "Pending for CMO approval" };
+  const email = sendRequestEmail_(employee, date, status);
+  return { ok: true, employee: publicEmployee_(employee), date, status, approval, email, message: "Pending for CMO approval" };
 }
 
 function sendRequestEmail_(employee, date, status) {
@@ -188,11 +189,38 @@ function sendRequestEmail_(employee, date, status) {
     "Please open the Attendance Admin Panel to approve or cancel this request.",
   ].join("\n");
 
-  MailApp.sendEmail({
-    to: NOTIFICATION_EMAILS.join(","),
-    subject,
-    body,
-  });
+  try {
+    MailApp.sendEmail({
+      to: NOTIFICATION_EMAILS.join(","),
+      subject,
+      body,
+    });
+    return { sent: true };
+  } catch (error) {
+    return { sent: false, error: String(error && error.message ? error.message : error) };
+  }
+}
+
+function testEmail_(adminPin) {
+  if (String(adminPin || "").trim() !== ADMIN_PIN) return { ok: false, error: "Admin PIN galat hai." };
+  const subject = "Attendance App Test Email";
+  const body = [
+    "This is a test email from Attendance App.",
+    "",
+    `Time: ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd-MM-yyyy HH:mm")}`,
+    `Recipients: ${NOTIFICATION_EMAILS.join(", ")}`,
+  ].join("\n");
+
+  try {
+    MailApp.sendEmail({
+      to: NOTIFICATION_EMAILS.join(","),
+      subject,
+      body,
+    });
+    return { ok: true, message: "Test email send ho gaya. Inbox/spam check karo." };
+  } catch (error) {
+    return { ok: false, error: String(error && error.message ? error.message : error) };
+  }
 }
 
 function review_(adminPin, targetPin, date, decision) {
