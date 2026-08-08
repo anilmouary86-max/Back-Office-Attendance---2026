@@ -1,1 +1,3 @@
-# Back-Office-Attendance---2026
+# Attendance App
+
+Permanent attendance app backed by Google Sheets.
