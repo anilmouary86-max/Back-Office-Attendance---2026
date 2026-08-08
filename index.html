@@ -15,12 +15,14 @@
         --brand: #0f766e;
         --wfh: #dbeafe;
         --wfh-text: #1d4ed8;
-        --absent: #fee2e2;
-        --absent-text: #b91c1c;
         --cl: #fef3c7;
         --cl-text: #b45309;
+        --sl: #dcfce7;
+        --sl-text: #15803d;
         --pending: #fff7ed;
         --pending-text: #c2410c;
+        --cancelled: #fee2e2;
+        --cancelled-text: #b91c1c;
       }
 
       * { box-sizing: border-box; }
@@ -140,8 +142,8 @@
         font-weight: 900;
       }
       .statusBtn.wfh { background: var(--wfh); color: var(--wfh-text); }
-      .statusBtn.absent { background: var(--absent); color: var(--absent-text); }
       .statusBtn.cl { background: var(--cl); color: var(--cl-text); }
+      .statusBtn.sl { background: var(--sl); color: var(--sl-text); }
       button { cursor: pointer; }
       button:disabled { opacity: 0.55; cursor: not-allowed; }
       .notice {
@@ -196,7 +198,7 @@
       }
       .summary {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 10px;
       }
       .actionBar {
@@ -251,10 +253,17 @@
         font-weight: 900;
       }
       .pill.WFH { background: var(--wfh); color: var(--wfh-text); }
-      .pill.A { background: var(--absent); color: var(--absent-text); }
       .pill.CL { background: var(--cl); color: var(--cl-text); }
+      .pill.SL { background: var(--sl); color: var(--sl-text); }
       .pill.pending { background: var(--pending); color: var(--pending-text); }
+      .pill.cancelled { background: var(--cancelled); color: var(--cancelled-text); }
       .pill.blank { background: #f8fafc; color: #94a3b8; }
+      .cellMeta {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.25;
+      }
       .hidden { display: none !important; }
 
       @media (max-width: 760px) {
@@ -291,18 +300,18 @@
         <label>Status</label>
         <div class="statusGrid">
           <button class="statusBtn wfh" data-status="WFH" type="button">Work From Home</button>
-          <button class="statusBtn absent" data-status="A" type="button">Absent</button>
           <button class="statusBtn cl" data-status="CL" type="button">CL</button>
+          <button class="statusBtn sl" data-status="SL" type="button">Sick Leave</button>
         </div>
 
-        <p class="notice" id="message">Apna PIN dalo. WFH/CL CMO approval ke liye pending rahega.</p>
+        <p class="notice" id="message">Apna PIN dalo. WFH/CL/Sick Leave CMO approval ke liye pending rahega.</p>
       </section>
 
       <section class="adminStack hidden" id="adminPanel">
         <div class="panel adminLogin">
           <div>
             <h2>Admin Panel</h2>
-            <p>Pending WFH/CL approve karo aur Excel download karo.</p>
+            <p>Pending attendance approve/cancel karo aur Excel download karo.</p>
           </div>
           <button class="secondary" type="button" id="hideAdmin">Hide Admin</button>
         </div>
@@ -318,9 +327,10 @@
           <div class="summary">
             <div class="kpi"><span>Employees</span><strong id="kpiEmployees">0</strong></div>
             <div class="kpi"><span>WFH Approved</span><strong id="kpiWfh">0</strong></div>
-            <div class="kpi"><span>Absent</span><strong id="kpiAbsent">0</strong></div>
             <div class="kpi"><span>CL Approved</span><strong id="kpiCl">0</strong></div>
+            <div class="kpi"><span>Sick Leave Approved</span><strong id="kpiSl">0</strong></div>
             <div class="kpi"><span>Pending</span><strong id="kpiPending">0</strong></div>
+            <div class="kpi"><span>Cancelled</span><strong id="kpiCancelled">0</strong></div>
           </div>
           <div class="panel actionBar">
             <button class="primary" id="downloadExcel" type="button">Download Excel</button>
@@ -337,7 +347,7 @@
     <script>
       const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwvZ-ObVQdKXNLFZwsBiXOklUnq0MuYt7Po6hgENFTXWZtCW06BcfUkBa6W8bbuWJhNtA/exec";
       const days = Array.from({ length: 30 }, (_, index) => index + 1);
-      const statusLabels = { WFH: "Work From Home", A: "Absent", CL: "CL" };
+      const statusLabels = { WFH: "Work From Home", CL: "CL", SL: "Sick Leave" };
       let selectedDay = todayInAugust();
       let employee = null;
       let rows = [];
@@ -377,7 +387,7 @@
             resolve(data);
           };
           const script = document.createElement("script");
-          const qs = new URLSearchParams({ ...params, callback: cb });
+          const qs = new URLSearchParams({ ...params, callback: cb, _: Date.now() });
           script.src = SCRIPT_URL + "?" + qs.toString();
           script.onerror = () => {
             delete window[cb];
@@ -431,7 +441,7 @@
         empCode.textContent = "-";
         empDept.textContent = "-";
         if (pin.length < 4) {
-          setMessage("Apna PIN dalo. WFH/CL CMO approval ke liye pending rahega.");
+          setMessage("Apna PIN dalo. WFH/CL/Sick Leave CMO approval ke liye pending rahega.");
           return;
         }
 
@@ -464,8 +474,7 @@
             return;
           }
           playDoneSound();
-          const suffix = data.approval === "Pending" ? "Pending for CMO approval" : "Approved";
-          setMessage(`${data.employee.name} ki ${dateKey(selectedDay)} ${statusLabels[status]} attendance lag gayi: ${suffix}`);
+          setMessage(`${data.employee.name} ki ${dateKey(selectedDay)} ${statusLabels[status]} request CMO approval ke liye pending hai.`);
         } catch (error) {
           setMessage(error.message);
         } finally {
@@ -507,25 +516,47 @@
       function entryText(entry) {
         if (!entry) return "";
         if (entry.approval === "Pending") return `${entry.status} Pending`;
+        if (entry.approval === "Cancelled") return `${entry.status} Cancelled`;
         return entry.status;
+      }
+
+      function entryMeta(entry) {
+        if (!entry) return "";
+        const lines = [];
+        if (entry.savedAt) lines.push(`Sent: ${entry.savedAt}`);
+        if (entry.reviewedAt) lines.push(`Reviewed: ${entry.reviewedAt}`);
+        if (entry.reviewedBy) lines.push(`By: ${entry.reviewedBy}`);
+        return lines.length ? `<div class="cellMeta">${lines.join("<br>")}</div>` : "";
+      }
+
+      function entryExportText(entry) {
+        const text = entryText(entry);
+        if (!text) return "";
+        const parts = [text];
+        if (entry.savedAt) parts.push(`Sent: ${entry.savedAt}`);
+        if (entry.reviewedAt) parts.push(`Reviewed: ${entry.reviewedAt}`);
+        if (entry.reviewedBy) parts.push(`By: ${entry.reviewedBy}`);
+        return parts.join(" | ");
       }
 
       function renderAdmin() {
         const totals = rows.reduce(
           (acc, row) => {
             acc.WFH += row.counts.WFH;
-            acc.A += row.counts.A;
             acc.CL += row.counts.CL;
+            acc.SL += row.counts.SL;
             acc.pending += row.pending || 0;
+            acc.cancelled += row.cancelled || 0;
             return acc;
           },
-          { WFH: 0, A: 0, CL: 0, pending: 0 }
+          { WFH: 0, CL: 0, SL: 0, pending: 0, cancelled: 0 }
         );
         document.getElementById("kpiEmployees").textContent = rows.length;
         document.getElementById("kpiWfh").textContent = totals.WFH;
-        document.getElementById("kpiAbsent").textContent = totals.A;
         document.getElementById("kpiCl").textContent = totals.CL;
+        document.getElementById("kpiSl").textContent = totals.SL;
         document.getElementById("kpiPending").textContent = totals.pending;
+        document.getElementById("kpiCancelled").textContent = totals.cancelled;
 
         const table = document.getElementById("attendanceTable");
         table.innerHTML = `
@@ -536,9 +567,10 @@
               <th>Designation</th>
               ${days.map((day) => `<th>${day}</th>`).join("")}
               <th>WFH Approved</th>
-              <th>Absent</th>
               <th>CL Approved</th>
+              <th>Sick Leave Approved</th>
               <th>Pending</th>
+              <th>Cancelled</th>
             </tr>
           </thead>
           <tbody>
@@ -551,16 +583,17 @@
                   const date = dateKey(day);
                   const entry = row.days[date];
                   const value = entryText(entry);
-                  const cls = entry?.approval === "Pending" ? "pending" : entry?.status || "blank";
+                  const cls = entry?.approval === "Pending" ? "pending" : entry?.approval === "Cancelled" ? "cancelled" : entry?.status || "blank";
                   const reviewButtons = entry?.approval === "Pending"
                     ? `<br><button class="approveBtn" data-action="approve" data-pin="${row.pin}" data-date="${date}" type="button">Approve</button><button class="cancelBtn" data-action="cancel" data-pin="${row.pin}" data-date="${date}" type="button">Cancel</button>`
                     : "";
-                  return `<td><span class="pill ${cls}">${value || "-"}</span>${reviewButtons}</td>`;
+                  return `<td><span class="pill ${cls}">${value || "-"}</span>${entryMeta(entry)}${reviewButtons}</td>`;
                 }).join("")}
                 <td>${row.counts.WFH}</td>
-                <td>${row.counts.A}</td>
                 <td>${row.counts.CL}</td>
+                <td>${row.counts.SL}</td>
                 <td>${row.pending || 0}</td>
+                <td>${row.cancelled || 0}</td>
               </tr>
             `).join("")}
           </tbody>
@@ -572,16 +605,17 @@
       }
 
       function downloadXls() {
-        const header = ["Employee Code", "Employee Name", "Designation", ...days.map((day) => `${day}-Aug`), "WFH Approved", "Absent Count", "CL Approved", "Pending Count"];
+        const header = ["Employee Code", "Employee Name", "Designation", ...days.map((day) => `${day}-Aug`), "WFH Approved", "CL Approved", "Sick Leave Approved", "Pending Count", "Cancelled Count"];
         const body = rows.map((row) => [
           row.code,
           row.name,
           row.department,
-          ...days.map((day) => entryText(row.days[dateKey(day)])),
+          ...days.map((day) => entryExportText(row.days[dateKey(day)])),
           row.counts.WFH,
-          row.counts.A,
           row.counts.CL,
+          row.counts.SL,
           row.pending || 0,
+          row.cancelled || 0,
         ]);
         const html = `
           <html><head><meta charset="utf-8" />
@@ -591,16 +625,18 @@
             th,td{border:1px solid #94a3b8;padding:6px 8px;text-align:center}
             td:first-child,td:nth-child(2),td:nth-child(3){text-align:left}
             .WFH{background:#dbeafe;color:#1d4ed8;font-weight:700}
-            .A{background:#fee2e2;color:#b91c1c;font-weight:700}
             .CL{background:#fef3c7;color:#b45309;font-weight:700}
+            .SL{background:#dcfce7;color:#15803d;font-weight:700}
             .PENDING{background:#fff7ed;color:#c2410c;font-weight:700}
+            .CANCELLED{background:#fee2e2;color:#b91c1c;font-weight:700}
           </style></head><body>
           <table>
             <thead><tr>${header.map((cell) => `<th>${cell}</th>`).join("")}</tr></thead>
             <tbody>${body.map((line) => `<tr>${line.map((cell) => {
               const text = String(cell || "");
               const cls = text.includes("Pending") ? "PENDING" : text;
-              return `<td class="${["WFH", "A", "CL", "PENDING"].includes(cls) ? cls : ""}">${text}</td>`;
+              const exportCls = text.includes("Cancelled") ? "CANCELLED" : cls;
+              return `<td class="${["WFH", "CL", "SL", "PENDING", "CANCELLED"].includes(exportCls) ? exportCls : ""}">${text}</td>`;
             }).join("")}</tr>`).join("")}</tbody>
           </table></body></html>`;
         const blob = new Blob([html], { type: "application/vnd.ms-excel" });
