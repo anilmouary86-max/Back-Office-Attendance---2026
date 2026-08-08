@@ -389,6 +389,8 @@
       let tapTimer = null;
       let lastEmployeeStatusKey = "";
       let employeeStatusTimer = null;
+      let adminPollTimer = null;
+      let adminSeenPendingKeys = new Set();
       let audioCtx = null;
       let soundReady = false;
 
@@ -492,20 +494,32 @@
         } catch {}
       }
 
-      function notifyEmployeeDecision(entry) {
-        playDoneSound();
-        setTimeout(playDoneSound, 450);
-        if (navigator.vibrate) navigator.vibrate([250, 120, 250]);
+      function speakMessage(text) {
         try {
           if ("speechSynthesis" in window) {
             window.speechSynthesis.cancel();
-            const text = entry.approval === "Approved" ? `${statusLabels[entry.status] || entry.status} approved ho chuki hai` : `${statusLabels[entry.status] || entry.status} cancel ho chuki hai`;
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = "hi-IN";
             utterance.rate = 0.95;
             window.speechSynthesis.speak(utterance);
           }
         } catch {}
+      }
+
+      function notifyAdminRequest(request) {
+        playDoneSound();
+        setTimeout(playDoneSound, 450);
+        if (navigator.vibrate) navigator.vibrate([250, 120, 250]);
+        const label = statusLabels[request.status] || request.status;
+        speakMessage(`New ${label} request from ${request.name}`);
+      }
+
+      function notifyEmployeeDecision(entry) {
+        playDoneSound();
+        setTimeout(playDoneSound, 450);
+        if (navigator.vibrate) navigator.vibrate([250, 120, 250]);
+        const text = entry.approval === "Approved" ? `${statusLabels[entry.status] || entry.status} approved ho chuki hai` : `${statusLabels[entry.status] || entry.status} cancel ho chuki hai`;
+        speakMessage(text);
       }
 
       function startEmployeeStatusTimer() {
@@ -613,7 +627,43 @@
         }
       }
 
-      async function loadAdminData() {
+      function getPendingRequests() {
+        const pending = [];
+        rows.forEach((row) => {
+          Object.entries(row.days || {}).forEach(([date, entry]) => {
+            if (entry?.approval === "Pending") {
+              pending.push({
+                key: `${row.pin}|${date}|${entry.status}|${entry.savedAt || ""}`,
+                name: row.name,
+                date,
+                status: entry.status,
+              });
+            }
+          });
+        });
+        return pending;
+      }
+
+      function updateAdminNotifications(shouldNotify) {
+        const pending = getPendingRequests();
+        const currentKeys = new Set(pending.map((item) => item.key));
+        if (shouldNotify) {
+          pending.forEach((item) => {
+            if (!adminSeenPendingKeys.has(item.key)) {
+              notifyAdminRequest(item);
+              document.getElementById("adminStatus").textContent = `New ${statusLabels[item.status] || item.status} request: ${item.name}`;
+            }
+          });
+        }
+        adminSeenPendingKeys = currentKeys;
+      }
+
+      function startAdminPolling() {
+        clearInterval(adminPollTimer);
+        adminPollTimer = setInterval(() => loadAdminData(true), 5000);
+      }
+
+      async function loadAdminData(notifyNewRequests = false) {
         const adminPin = document.getElementById("adminPin").value.trim();
         const adminMessage = document.getElementById("adminMessage");
         try {
@@ -625,8 +675,10 @@
           rows = data.rows || [];
           adminLogin.classList.add("hidden");
           adminData.classList.remove("hidden");
-          document.getElementById("adminStatus").textContent = "Attendance loaded.";
           renderAdmin();
+          updateAdminNotifications(notifyNewRequests);
+          if (!notifyNewRequests) document.getElementById("adminStatus").textContent = "Attendance loaded.";
+          startAdminPolling();
         } catch (error) {
           adminMessage.textContent = error.message;
         }
@@ -641,12 +693,12 @@
           return;
         }
         document.getElementById("adminStatus").textContent = data.message || "Done.";
-        await loadAdminData();
+        await loadAdminData(false);
       }
 
       async function clearAllAttendance() {
         const confirmText = window.prompt("Saari attendance clear karni hai? Confirm ke liye CLEAR type karo.");
-        if (confirmText !== "CLEAR") {
+        if (String(confirmText || "").trim().toUpperCase() !== "CLEAR") {
           document.getElementById("adminStatus").textContent = "Clear cancel ho gaya.";
           return;
         }
@@ -657,8 +709,9 @@
           document.getElementById("adminStatus").textContent = data.error || "Clear nahi hua.";
           return;
         }
+        adminSeenPendingKeys = new Set();
+        await loadAdminData(false);
         document.getElementById("adminStatus").textContent = data.message || "Attendance clear ho gayi.";
-        await loadAdminData();
       }
 
       function entryText(entry) {
@@ -808,6 +861,7 @@
         }
       });
       document.getElementById("hideAdmin").addEventListener("click", () => {
+        clearInterval(adminPollTimer);
         adminPanel.classList.add("hidden");
         employeePanel.classList.remove("hidden");
       });
@@ -818,8 +872,8 @@
       document.querySelectorAll(".statusBtn").forEach((button) => {
         button.addEventListener("click", () => submitAttendance(button.dataset.status));
       });
-      document.getElementById("loadAdmin").addEventListener("click", loadAdminData);
-      document.getElementById("refreshAdmin").addEventListener("click", loadAdminData);
+      document.getElementById("loadAdmin").addEventListener("click", () => loadAdminData(false));
+      document.getElementById("refreshAdmin").addEventListener("click", () => loadAdminData(false));
       document.getElementById("downloadExcel").addEventListener("click", downloadXls);
       document.getElementById("clearAllAttendance").addEventListener("click", clearAllAttendance);
       renderDays();

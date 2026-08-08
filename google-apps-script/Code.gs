@@ -1,6 +1,13 @@
 const ADMIN_PIN = "2408";
 const VALID_SAVE_STATUSES = ["WFH", "CL", "SL"];
 const VALID_REVIEW_STATUSES = ["WFH", "A", "CL", "SL"];
+const NOTIFICATION_EMAILS = ["cmo.rajasthan@medsave.in", "mis3.rajasthan@medsave.in"];
+const STATUS_LABELS = {
+  WFH: "Work From Home",
+  CL: "CL",
+  SL: "Sick Leave",
+  A: "Absent",
+};
 
 const EMPLOYEES = [
   ["4387", "MB003783", "Dr. Suresh Mathur", "CMO"],
@@ -158,7 +165,34 @@ function save_(pin, date, status) {
     sheet.appendRow(row);
   }
 
+  sendRequestEmail_(employee, date, status);
   return { ok: true, employee: publicEmployee_(employee), date, status, approval, message: "Pending for CMO approval" };
+}
+
+function sendRequestEmail_(employee, date, status) {
+  const label = STATUS_LABELS[status] || status;
+  const subject = `Attendance Approval Pending - ${label} - ${employee.name}`;
+  const body = [
+    "Dear Sir,",
+    "",
+    "New attendance approval request received.",
+    "",
+    `Employee Name: ${employee.name}`,
+    `Employee Code: ${employee.code || "-"}`,
+    `Designation: ${employee.department || "-"}`,
+    `Date: ${date}`,
+    `Request Type: ${label}`,
+    `Status: Pending for CMO approval`,
+    `Request Time: ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd-MM-yyyy HH:mm")}`,
+    "",
+    "Please open the Attendance Admin Panel to approve or cancel this request.",
+  ].join("\n");
+
+  MailApp.sendEmail({
+    to: NOTIFICATION_EMAILS.join(","),
+    subject,
+    body,
+  });
 }
 
 function review_(adminPin, targetPin, date, decision) {
@@ -201,7 +235,8 @@ function clearAll_(adminPin, confirmText) {
   if (lastRow <= 1) return { ok: true, message: "Attendance already clear hai.", cleared: 0 };
 
   const cleared = lastRow - 1;
-  sheet.getRange(2, 1, cleared, lastColumn).clearContent();
+  sheet.deleteRows(2, cleared);
+  SpreadsheetApp.flush();
   return { ok: true, message: `${cleared} attendance records clear ho gaye.`, cleared };
 }
 
