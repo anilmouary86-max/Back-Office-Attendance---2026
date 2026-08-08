@@ -45,6 +45,7 @@ function doGet(e) {
   let result;
   try {
     if (action === "employee") result = employee_(params.pin);
+    else if (action === "status") result = status_(params.pin, params.date);
     else if (action === "save") result = save_(params.pin, params.date, params.status);
     else if (action === "admin") result = admin_(params.pin);
     else if (action === "approve") result = review_(params.adminPin, params.targetPin, params.date, "Approved");
@@ -95,6 +96,32 @@ function employee_(pin) {
   const employee = findEmployee_(pin);
   if (!employee) return { ok: false, error: "PIN galat hai." };
   return { ok: true, employee: publicEmployee_(employee) };
+}
+
+function status_(pin, date) {
+  const employee = findEmployee_(pin);
+  if (!employee) return { ok: false, error: "PIN galat hai." };
+  if (!/^2026-08-(0[1-9]|[12][0-9]|30)$/.test(String(date || ""))) {
+    return { ok: false, error: "August ki valid date select karo." };
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Attendance");
+  const values = sheet.getDataRange().getValues();
+  let entry = null;
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === employee.pin && formatDate_(values[i][4]) === date) {
+      entry = {
+        status: String(values[i][5] || ""),
+        approval: String(values[i][6] || "Pending"),
+        savedAt: formatDateTime_(values[i][7]),
+        reviewedAt: formatDateTime_(values[i][8]),
+        reviewedBy: String(values[i][9] || ""),
+      };
+    }
+  }
+
+  return { ok: true, employee: publicEmployee_(employee), date, entry };
 }
 
 function save_(pin, date, status) {

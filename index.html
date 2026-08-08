@@ -154,6 +154,26 @@
         color: #155e75;
         font-weight: 800;
       }
+      .currentStatus {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        background: #f8fafc;
+      }
+      .currentStatus span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .currentStatus strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 17px;
+      }
+      .currentStatus.pending { background: var(--pending); color: var(--pending-text); }
+      .currentStatus.approved { background: #ecfdf5; color: #047857; }
+      .currentStatus.cancelled { background: var(--cancelled); color: var(--cancelled-text); }
       .adminLogin {
         display: flex;
         align-items: center;
@@ -297,6 +317,11 @@
         <label>August Date</label>
         <div class="dateGrid" id="dateGrid"></div>
 
+        <div class="currentStatus" id="currentStatus">
+          <span>Selected Date Status</span>
+          <strong>PIN dalne ke baad status dikhega.</strong>
+        </div>
+
         <label>Status</label>
         <div class="statusGrid">
           <button class="statusBtn wfh" data-status="WFH" type="button">Work From Home</button>
@@ -353,12 +378,15 @@
       let rows = [];
       let tapCount = 0;
       let tapTimer = null;
+      let lastEmployeeStatusKey = "";
+      let employeeStatusTimer = null;
 
       const pinInput = document.getElementById("pin");
       const empName = document.getElementById("empName");
       const empCode = document.getElementById("empCode");
       const empDept = document.getElementById("empDept");
       const message = document.getElementById("message");
+      const currentStatus = document.getElementById("currentStatus");
       const dateGrid = document.getElementById("dateGrid");
       const employeePanel = document.getElementById("employeePanel");
       const adminPanel = document.getElementById("adminPanel");
@@ -408,6 +436,7 @@
           button.addEventListener("click", () => {
             selectedDay = day;
             renderDays();
+            refreshEmployeeStatus(false);
           });
           dateGrid.appendChild(button);
         });
@@ -434,6 +463,53 @@
         } catch {}
       }
 
+      function startEmployeeStatusTimer() {
+        clearInterval(employeeStatusTimer);
+        employeeStatusTimer = setInterval(() => refreshEmployeeStatus(true), 15000);
+      }
+
+      function employeeStatusText(entry) {
+        if (!entry) return "Is date par abhi koi request nahi lagi hai.";
+        const label = statusLabels[entry.status] || entry.status;
+        if (entry.approval === "Approved") return `${label} approved ho chuki hai.`;
+        if (entry.approval === "Cancelled") return `${label} cancel ho chuki hai.`;
+        return `${label} CMO approval ke liye pending hai.`;
+      }
+
+      function renderEmployeeStatus(entry) {
+        currentStatus.classList.remove("pending", "approved", "cancelled");
+        if (entry?.approval === "Pending") currentStatus.classList.add("pending");
+        if (entry?.approval === "Approved") currentStatus.classList.add("approved");
+        if (entry?.approval === "Cancelled") currentStatus.classList.add("cancelled");
+        const meta = entry
+          ? [
+              entry.savedAt ? `Sent: ${entry.savedAt}` : "",
+              entry.reviewedAt ? `Reviewed: ${entry.reviewedAt}` : "",
+            ].filter(Boolean).join(" | ")
+          : "";
+        currentStatus.innerHTML = `<span>Selected Date Status</span><strong>${employeeStatusText(entry)}</strong>${meta ? `<div class="cellMeta">${meta}</div>` : ""}`;
+      }
+
+      async function refreshEmployeeStatus(notify) {
+        if (!employee) {
+          renderEmployeeStatus(null);
+          return;
+        }
+        const pin = pinInput.value.trim();
+        try {
+          const data = await callApi({ action: "status", pin, date: dateKey(selectedDay) });
+          if (!data.ok) return;
+          const entry = data.entry || null;
+          const key = entry ? `${selectedDay}|${entry.status}|${entry.approval}|${entry.reviewedAt || ""}` : `${selectedDay}|blank`;
+          if (notify && lastEmployeeStatusKey && key !== lastEmployeeStatusKey && entry && entry.approval !== "Pending") {
+            playDoneSound();
+            setMessage(employeeStatusText(entry));
+          }
+          lastEmployeeStatusKey = key;
+          renderEmployeeStatus(entry);
+        } catch {}
+      }
+
       async function lookupPin() {
         const pin = pinInput.value.trim();
         employee = null;
@@ -441,6 +517,9 @@
         empCode.textContent = "-";
         empDept.textContent = "-";
         if (pin.length < 4) {
+          clearInterval(employeeStatusTimer);
+          lastEmployeeStatusKey = "";
+          renderEmployeeStatus(null);
           setMessage("Apna PIN dalo. WFH/CL/Sick Leave CMO approval ke liye pending rahega.");
           return;
         }
@@ -448,6 +527,9 @@
         try {
           const data = await callApi({ action: "employee", pin });
           if (!data.ok) {
+            clearInterval(employeeStatusTimer);
+            lastEmployeeStatusKey = "";
+            renderEmployeeStatus(null);
             setMessage(data.error || "PIN galat hai.");
             return;
           }
@@ -456,6 +538,9 @@
           empCode.textContent = employee.code || "-";
           empDept.textContent = employee.department || "-";
           setMessage(`${employee.name} found. Date select karke attendance click karo.`);
+          lastEmployeeStatusKey = "";
+          await refreshEmployeeStatus(false);
+          startEmployeeStatusTimer();
         } catch (error) {
           setMessage(error.message);
         }
@@ -475,6 +560,7 @@
           }
           playDoneSound();
           setMessage(`${data.employee.name} ki ${dateKey(selectedDay)} ${statusLabels[status]} request CMO approval ke liye pending hai.`);
+          await refreshEmployeeStatus(false);
         } catch (error) {
           setMessage(error.message);
         } finally {
