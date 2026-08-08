@@ -5,45 +5,635 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>August Attendance</title>
     <style>
-      :root{--bg:#f2f5f8;--panel:#fff;--ink:#172033;--muted:#64748b;--line:#d6dee8;--dark:#0f172a;--brand:#0f766e;--wfh:#dbeafe;--wfh-text:#1d4ed8;--absent:#fee2e2;--absent-text:#b91c1c;--cl:#fef3c7;--cl-text:#b45309}
-      *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Calibri,Arial,sans-serif}main{width:min(1180px,100%);margin:0 auto;padding:14px}header{position:sticky;top:0;z-index:20;margin:-14px -14px 14px;padding:14px 16px;background:var(--dark);color:#fff;box-shadow:0 2px 10px rgba(15,23,42,.2)}.titleButton{border:0;background:transparent;color:#fff;font:inherit;font-size:20px;font-weight:800;padding:0;text-align:left}.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:0 1px 2px rgba(15,23,42,.06)}.employeePanel,.adminStack{display:grid;gap:12px}label{display:block;margin:12px 0 6px;color:var(--muted);font-size:13px;font-weight:800}input{width:100%;border:1px solid var(--line);border-radius:6px;padding:12px;color:var(--ink);font:inherit;background:#fff}.identity{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.identity div,.kpi{border:1px solid var(--line);border-radius:8px;padding:12px;background:#f8fafc}.identity span,.kpi span{display:block;color:var(--muted);font-size:12px;font-weight:800}.identity strong,.kpi strong{display:block;margin-top:4px;font-size:17px}.dateGrid{display:grid;grid-template-columns:repeat(10,1fr);gap:7px}.day{border:1px solid var(--line);border-radius:6px;padding:10px 0;background:#fff;color:var(--ink);font-weight:900}.day.active{border-color:var(--dark);background:var(--dark);color:#fff}.statusGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.statusBtn{border:0;border-radius:7px;padding:16px 10px;font-size:16px;font-weight:900}.statusBtn.wfh{background:var(--wfh);color:var(--wfh-text)}.statusBtn.absent{background:var(--absent);color:var(--absent-text)}.statusBtn.cl{background:var(--cl);color:var(--cl-text)}button{cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.notice{margin:12px 0 0;padding:10px 12px;border-radius:6px;background:#ecfeff;color:#155e75;font-weight:800}.adminLogin{display:flex;align-items:center;justify-content:space-between;gap:12px}.adminLogin h2,.adminLogin p{margin:0}.adminLogin p{margin-top:4px;color:var(--muted)}.primary,.secondary{border:0;border-radius:6px;padding:10px 13px;font-weight:900}.primary{background:var(--brand);color:#fff}.secondary{background:#e2e8f0;color:var(--dark)}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.actionBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.actionBar span{color:var(--muted);font-weight:700}.tableWrap{overflow:auto;max-height:58vh;border:1px solid var(--line);background:#fff}table{width:max-content;min-width:100%;border-collapse:collapse;font-size:13px}th,td{border:1px solid var(--line);padding:7px 8px;text-align:center;white-space:nowrap}th{position:sticky;top:0;z-index:2;background:var(--dark);color:#fff}.sticky{position:sticky;left:0;z-index:3;background:#e0f2fe;color:var(--dark);text-align:left}.pill{display:inline-block;min-width:38px;padding:3px 7px;border-radius:999px;font-weight:900}.pill.WFH{background:var(--wfh);color:var(--wfh-text)}.pill.A{background:var(--absent);color:var(--absent-text)}.pill.CL{background:var(--cl);color:var(--cl-text)}.pill.blank{background:#f8fafc;color:#94a3b8}.hidden{display:none!important}@media(max-width:760px){main{padding:10px}header{margin:-10px -10px 10px}.identity,.statusGrid,.summary{grid-template-columns:1fr}.dateGrid{grid-template-columns:repeat(5,1fr)}.statusBtn{padding:18px 10px}.adminLogin{align-items:stretch;flex-direction:column}}
+      :root {
+        --bg: #f2f5f8;
+        --panel: #ffffff;
+        --ink: #172033;
+        --muted: #64748b;
+        --line: #d6dee8;
+        --dark: #0f172a;
+        --brand: #0f766e;
+        --wfh: #dbeafe;
+        --wfh-text: #1d4ed8;
+        --absent: #fee2e2;
+        --absent-text: #b91c1c;
+        --cl: #fef3c7;
+        --cl-text: #b45309;
+        --pending: #fff7ed;
+        --pending-text: #c2410c;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Calibri, Arial, sans-serif;
+      }
+      main {
+        width: min(1180px, 100%);
+        margin: 0 auto;
+        padding: 14px;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        margin: -14px -14px 14px;
+        padding: 14px 16px;
+        background: var(--dark);
+        color: #fff;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.2);
+      }
+      .titleButton {
+        border: 0;
+        background: transparent;
+        color: #fff;
+        font: inherit;
+        font-size: 20px;
+        font-weight: 800;
+        padding: 0;
+        text-align: left;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+      }
+      .employeePanel,
+      .adminStack {
+        display: grid;
+        gap: 12px;
+      }
+      label {
+        display: block;
+        margin: 12px 0 6px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+      input {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 12px;
+        color: var(--ink);
+        font: inherit;
+        background: #fff;
+      }
+      .identity {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin: 12px 0;
+      }
+      .identity div,
+      .kpi {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        background: #f8fafc;
+      }
+      .identity span,
+      .kpi span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .identity strong,
+      .kpi strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 17px;
+      }
+      .dateGrid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 7px;
+      }
+      .day {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px 0;
+        background: #fff;
+        color: var(--ink);
+        font-weight: 900;
+      }
+      .day.active {
+        border-color: var(--dark);
+        background: var(--dark);
+        color: #fff;
+      }
+      .statusGrid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .statusBtn {
+        border: 0;
+        border-radius: 7px;
+        padding: 16px 10px;
+        font-size: 16px;
+        font-weight: 900;
+      }
+      .statusBtn.wfh { background: var(--wfh); color: var(--wfh-text); }
+      .statusBtn.absent { background: var(--absent); color: var(--absent-text); }
+      .statusBtn.cl { background: var(--cl); color: var(--cl-text); }
+      button { cursor: pointer; }
+      button:disabled { opacity: 0.55; cursor: not-allowed; }
+      .notice {
+        margin: 12px 0 0;
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: #ecfeff;
+        color: #155e75;
+        font-weight: 800;
+      }
+      .adminLogin {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .adminLogin h2,
+      .adminLogin p {
+        margin: 0;
+      }
+      .adminLogin p {
+        margin-top: 4px;
+        color: var(--muted);
+      }
+      .primary,
+      .secondary,
+      .approveBtn {
+        border: 0;
+        border-radius: 6px;
+        padding: 10px 13px;
+        font-weight: 900;
+      }
+      .primary { background: var(--brand); color: #fff; }
+      .secondary { background: #e2e8f0; color: var(--dark); }
+      .approveBtn {
+        padding: 5px 8px;
+        margin-top: 5px;
+        background: var(--brand);
+        color: #fff;
+        font-size: 12px;
+      }
+      .cancelBtn {
+        border: 0;
+        border-radius: 6px;
+        padding: 5px 8px;
+        margin-top: 5px;
+        margin-left: 4px;
+        background: #fee2e2;
+        color: #b91c1c;
+        font-size: 12px;
+        font-weight: 900;
+      }
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+      }
+      .actionBar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .actionBar span {
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .tableWrap {
+        overflow: auto;
+        max-height: 58vh;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+      table {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 7px 8px;
+        text-align: center;
+        white-space: nowrap;
+      }
+      th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--dark);
+        color: #fff;
+      }
+      .sticky {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        background: #e0f2fe;
+        color: var(--dark);
+        text-align: left;
+      }
+      .pill {
+        display: inline-block;
+        min-width: 38px;
+        padding: 3px 7px;
+        border-radius: 999px;
+        font-weight: 900;
+      }
+      .pill.WFH { background: var(--wfh); color: var(--wfh-text); }
+      .pill.A { background: var(--absent); color: var(--absent-text); }
+      .pill.CL { background: var(--cl); color: var(--cl-text); }
+      .pill.pending { background: var(--pending); color: var(--pending-text); }
+      .pill.blank { background: #f8fafc; color: #94a3b8; }
+      .hidden { display: none !important; }
+
+      @media (max-width: 760px) {
+        main { padding: 10px; }
+        header { margin: -10px -10px 10px; }
+        .identity,
+        .statusGrid,
+        .summary { grid-template-columns: 1fr; }
+        .dateGrid { grid-template-columns: repeat(5, 1fr); }
+        .statusBtn { padding: 18px 10px; }
+        .adminLogin { align-items: stretch; flex-direction: column; }
+      }
     </style>
   </head>
   <body>
     <main>
-      <header><button class="titleButton" id="titleButton" type="button">August Attendance</button></header>
+      <header>
+        <button class="titleButton" id="titleButton" type="button">August Attendance</button>
+      </header>
+
       <section class="panel employeePanel" id="employeePanel">
-        <label for="pin">Employee PIN</label><input id="pin" inputmode="numeric" placeholder="Apna PIN dalo" type="password" />
-        <div class="identity"><div><span>Name</span><strong id="empName">-</strong></div><div><span>Employee Code</span><strong id="empCode">-</strong></div><div><span>Designation</span><strong id="empDept">-</strong></div></div>
-        <label>August Date</label><div class="dateGrid" id="dateGrid"></div>
-        <label>Status</label><div class="statusGrid"><button class="statusBtn wfh" data-status="WFH" type="button">Work From Home</button><button class="statusBtn absent" data-status="A" type="button">Absent</button><button class="statusBtn cl" data-status="CL" type="button">CL</button></div>
-        <p class="notice" id="message">Google Sheet URL setup karo.</p>
+        <label for="pin">Employee PIN</label>
+        <input id="pin" inputmode="numeric" placeholder="Apna PIN dalo" type="password" />
+
+        <div class="identity">
+          <div><span>Name</span><strong id="empName">-</strong></div>
+          <div><span>Employee Code</span><strong id="empCode">-</strong></div>
+          <div><span>Designation</span><strong id="empDept">-</strong></div>
+        </div>
+
+        <label>August Date</label>
+        <div class="dateGrid" id="dateGrid"></div>
+
+        <label>Status</label>
+        <div class="statusGrid">
+          <button class="statusBtn wfh" data-status="WFH" type="button">Work From Home</button>
+          <button class="statusBtn absent" data-status="A" type="button">Absent</button>
+          <button class="statusBtn cl" data-status="CL" type="button">CL</button>
+        </div>
+
+        <p class="notice" id="message">Apna PIN dalo. WFH/CL CMO approval ke liye pending rahega.</p>
       </section>
+
       <section class="adminStack hidden" id="adminPanel">
-        <div class="panel adminLogin"><div><h2>Admin Panel</h2><p>Admin PIN dalke attendance dekho aur Excel download karo.</p></div><button class="secondary" type="button" id="hideAdmin">Hide Admin</button></div>
-        <div class="panel" id="adminLogin"><label for="adminPin">Admin PIN</label><input id="adminPin" inputmode="numeric" placeholder="Admin PIN" type="password" /><button class="primary" id="loadAdmin" type="button">Load Attendance</button><p class="notice" id="adminMessage">Admin PIN dalke data load karo.</p></div>
-        <div id="adminData" class="hidden"><div class="summary"><div class="kpi"><span>Employees</span><strong id="kpiEmployees">0</strong></div><div class="kpi"><span>WFH</span><strong id="kpiWfh">0</strong></div><div class="kpi"><span>Absent</span><strong id="kpiAbsent">0</strong></div><div class="kpi"><span>CL</span><strong id="kpiCl">0</strong></div></div><div class="panel actionBar"><button class="primary" id="downloadExcel" type="button">Download Excel</button><button class="secondary" id="refreshAdmin" type="button">Refresh</button><span id="adminStatus">Attendance loaded.</span></div><div class="tableWrap"><table id="attendanceTable"></table></div></div>
+        <div class="panel adminLogin">
+          <div>
+            <h2>Admin Panel</h2>
+            <p>Pending WFH/CL approve karo aur Excel download karo.</p>
+          </div>
+          <button class="secondary" type="button" id="hideAdmin">Hide Admin</button>
+        </div>
+
+        <div class="panel" id="adminLogin">
+          <label for="adminPin">Admin PIN</label>
+          <input id="adminPin" inputmode="numeric" placeholder="Admin PIN" type="password" />
+          <button class="primary" id="loadAdmin" type="button">Load Attendance</button>
+          <p class="notice" id="adminMessage">Admin PIN dalke data load karo.</p>
+        </div>
+
+        <div id="adminData" class="hidden">
+          <div class="summary">
+            <div class="kpi"><span>Employees</span><strong id="kpiEmployees">0</strong></div>
+            <div class="kpi"><span>WFH Approved</span><strong id="kpiWfh">0</strong></div>
+            <div class="kpi"><span>Absent</span><strong id="kpiAbsent">0</strong></div>
+            <div class="kpi"><span>CL Approved</span><strong id="kpiCl">0</strong></div>
+            <div class="kpi"><span>Pending</span><strong id="kpiPending">0</strong></div>
+          </div>
+          <div class="panel actionBar">
+            <button class="primary" id="downloadExcel" type="button">Download Excel</button>
+            <button class="secondary" id="refreshAdmin" type="button">Refresh</button>
+            <span id="adminStatus">Attendance loaded.</span>
+          </div>
+          <div class="tableWrap">
+            <table id="attendanceTable"></table>
+          </div>
+        </div>
       </section>
     </main>
+
     <script>
       const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwvZ-ObVQdKXNLFZwsBiXOklUnq0MuYt7Po6hgENFTXWZtCW06BcfUkBa6W8bbuWJhNtA/exec";
       const days = Array.from({ length: 30 }, (_, index) => index + 1);
       const statusLabels = { WFH: "Work From Home", A: "Absent", CL: "CL" };
-      let selectedDay = todayInAugust(), employee = null, rows = [], tapCount = 0, tapTimer = null;
-      const pinInput = document.getElementById("pin"), empName = document.getElementById("empName"), empCode = document.getElementById("empCode"), empDept = document.getElementById("empDept"), message = document.getElementById("message"), dateGrid = document.getElementById("dateGrid"), employeePanel = document.getElementById("employeePanel"), adminPanel = document.getElementById("adminPanel"), adminLogin = document.getElementById("adminLogin"), adminData = document.getElementById("adminData");
-      function todayInAugust(){const now=new Date();return now.getMonth()===7?Math.min(now.getDate(),30):1}
-      function dateKey(day){return `2026-08-${String(day).padStart(2,"0")}`}
-      function setMessage(text){message.textContent=text}
-      function callApi(params){return new Promise((resolve,reject)=>{if(SCRIPT_URL.includes("PASTE_GOOGLE")){reject(new Error("Google Apps Script URL setup nahi hai."));return}const cb="cb_"+Date.now()+"_"+Math.random().toString(36).slice(2);window[cb]=(data)=>{delete window[cb];script.remove();resolve(data)};const script=document.createElement("script");const qs=new URLSearchParams({...params,callback:cb});script.src=SCRIPT_URL+"?"+qs.toString();script.onerror=()=>{delete window[cb];script.remove();reject(new Error("Google Sheet se connect nahi hua."))};document.body.appendChild(script)})}
-      function renderDays(){dateGrid.innerHTML="";days.forEach(day=>{const button=document.createElement("button");button.type="button";button.className=day===selectedDay?"day active":"day";button.textContent=day;button.addEventListener("click",()=>{selectedDay=day;renderDays()});dateGrid.appendChild(button)})}
-      function playDoneSound(){try{const AudioContextClass=window.AudioContext||window.webkitAudioContext;const ctx=new AudioContextClass();const gain=ctx.createGain();gain.connect(ctx.destination);gain.gain.setValueAtTime(.001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.16,ctx.currentTime+.02);gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.55);[740,980].forEach((frequency,index)=>{const osc=ctx.createOscillator();osc.type="sine";osc.frequency.setValueAtTime(frequency,ctx.currentTime+index*.16);osc.connect(gain);osc.start(ctx.currentTime+index*.16);osc.stop(ctx.currentTime+index*.16+.14)});setTimeout(()=>ctx.close(),700)}catch{}}
-      async function lookupPin(){const pin=pinInput.value.trim();employee=null;empName.textContent="-";empCode.textContent="-";empDept.textContent="-";if(pin.length<4){setMessage("Apna PIN dalo. Name, code aur designation auto aa jayega.");return}try{const data=await callApi({action:"employee",pin});if(!data.ok){setMessage(data.error||"PIN galat hai.");return}employee=data.employee;empName.textContent=employee.name||"-";empCode.textContent=employee.code||"-";empDept.textContent=employee.department||"-";setMessage(`${employee.name} found. Date select karke attendance click karo.`)}catch(error){setMessage(error.message)}}
-      async function submitAttendance(status){if(!employee){setMessage("Pehle valid PIN dalo.");return}document.querySelectorAll(".statusBtn").forEach(button=>button.disabled=true);try{const data=await callApi({action:"save",pin:pinInput.value.trim(),date:dateKey(selectedDay),status});if(!data.ok){setMessage(data.error||"Attendance save nahi hui.");return}playDoneSound();setMessage(`${data.employee.name} ki ${dateKey(selectedDay)} attendance lag gayi: ${statusLabels[status]}`)}catch(error){setMessage(error.message)}finally{document.querySelectorAll(".statusBtn").forEach(button=>button.disabled=false)}}
-      async function loadAdminData(){const adminPin=document.getElementById("adminPin").value.trim(), adminMessage=document.getElementById("adminMessage");try{const data=await callApi({action:"admin",pin:adminPin});if(!data.ok){adminMessage.textContent=data.error||"Admin PIN galat hai.";return}rows=data.rows||[];adminLogin.classList.add("hidden");adminData.classList.remove("hidden");document.getElementById("adminStatus").textContent="Attendance loaded.";renderAdmin()}catch(error){adminMessage.textContent=error.message}}
-      function renderAdmin(){const totals=rows.reduce((acc,row)=>{acc.WFH+=row.counts.WFH;acc.A+=row.counts.A;acc.CL+=row.counts.CL;return acc},{WFH:0,A:0,CL:0});document.getElementById("kpiEmployees").textContent=rows.length;document.getElementById("kpiWfh").textContent=totals.WFH;document.getElementById("kpiAbsent").textContent=totals.A;document.getElementById("kpiCl").textContent=totals.CL;const table=document.getElementById("attendanceTable");table.innerHTML=`<thead><tr><th class="sticky">Code</th><th>Employee</th><th>Designation</th>${days.map(day=>`<th>${day}</th>`).join("")}<th>WFH</th><th>Absent</th><th>CL</th></tr></thead><tbody>${rows.map(row=>`<tr><td class="sticky">${row.code||"-"}</td><td>${row.name}</td><td>${row.department}</td>${days.map(day=>{const value=row.days[dateKey(day)]||"";return `<td><span class="pill ${value||"blank"}">${value||"-"}</span></td>`}).join("")}<td>${row.counts.WFH}</td><td>${row.counts.A}</td><td>${row.counts.CL}</td></tr>`).join("")}</tbody>`}
-      function downloadXls(){const header=["Employee Code","Employee Name","Designation",...days.map(day=>`${day}-Aug`),"WFH Count","Absent Count","CL Count"];const body=rows.map(row=>[row.code,row.name,row.department,...days.map(day=>row.days[dateKey(day)]||""),row.counts.WFH,row.counts.A,row.counts.CL]);const html=`<html><head><meta charset="utf-8" /><style>table{border-collapse:collapse;font-family:Calibri,Arial,sans-serif}th{background:#0f172a;color:#fff;font-weight:700}th,td{border:1px solid #94a3b8;padding:6px 8px;text-align:center}td:first-child,td:nth-child(2),td:nth-child(3){text-align:left}.WFH{background:#dbeafe;color:#1d4ed8;font-weight:700}.A{background:#fee2e2;color:#b91c1c;font-weight:700}.CL{background:#fef3c7;color:#b45309;font-weight:700}</style></head><body><table><thead><tr>${header.map(cell=>`<th>${cell}</th>`).join("")}</tr></thead><tbody>${body.map(line=>`<tr>${line.map(cell=>`<td class="${cell==="WFH"||cell==="A"||cell==="CL"?cell:""}">${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></body></html>`;const blob=new Blob([html],{type:"application/vnd.ms-excel"});const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download="August_Attendance_2026.xls";link.click();URL.revokeObjectURL(url)}
-      document.getElementById("titleButton").addEventListener("click",()=>{tapCount+=1;clearTimeout(tapTimer);tapTimer=setTimeout(()=>tapCount=0,1200);if(tapCount>=5){tapCount=0;employeePanel.classList.add("hidden");adminPanel.classList.remove("hidden")}});
-      document.getElementById("hideAdmin").addEventListener("click",()=>{adminPanel.classList.add("hidden");employeePanel.classList.remove("hidden")});pinInput.addEventListener("input",lookupPin);document.querySelectorAll(".statusBtn").forEach(button=>button.addEventListener("click",()=>submitAttendance(button.dataset.status)));document.getElementById("loadAdmin").addEventListener("click",loadAdminData);document.getElementById("refreshAdmin").addEventListener("click",loadAdminData);document.getElementById("downloadExcel").addEventListener("click",downloadXls);renderDays();
+      let selectedDay = todayInAugust();
+      let employee = null;
+      let rows = [];
+      let tapCount = 0;
+      let tapTimer = null;
+
+      const pinInput = document.getElementById("pin");
+      const empName = document.getElementById("empName");
+      const empCode = document.getElementById("empCode");
+      const empDept = document.getElementById("empDept");
+      const message = document.getElementById("message");
+      const dateGrid = document.getElementById("dateGrid");
+      const employeePanel = document.getElementById("employeePanel");
+      const adminPanel = document.getElementById("adminPanel");
+      const adminLogin = document.getElementById("adminLogin");
+      const adminData = document.getElementById("adminData");
+
+      function todayInAugust() {
+        const now = new Date();
+        return now.getMonth() === 7 ? Math.min(now.getDate(), 30) : 1;
+      }
+
+      function dateKey(day) {
+        return `2026-08-${String(day).padStart(2, "0")}`;
+      }
+
+      function setMessage(text) {
+        message.textContent = text;
+      }
+
+      function callApi(params) {
+        return new Promise((resolve, reject) => {
+          const cb = "cb_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+          window[cb] = (data) => {
+            delete window[cb];
+            script.remove();
+            resolve(data);
+          };
+          const script = document.createElement("script");
+          const qs = new URLSearchParams({ ...params, callback: cb });
+          script.src = SCRIPT_URL + "?" + qs.toString();
+          script.onerror = () => {
+            delete window[cb];
+            script.remove();
+            reject(new Error("Google Sheet se connect nahi hua."));
+          };
+          document.body.appendChild(script);
+        });
+      }
+
+      function renderDays() {
+        dateGrid.innerHTML = "";
+        days.forEach((day) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = day === selectedDay ? "day active" : "day";
+          button.textContent = day;
+          button.addEventListener("click", () => {
+            selectedDay = day;
+            renderDays();
+          });
+          dateGrid.appendChild(button);
+        });
+      }
+
+      function playDoneSound() {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          const ctx = new AudioContextClass();
+          const gain = ctx.createGain();
+          gain.connect(ctx.destination);
+          gain.gain.setValueAtTime(0.001, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+          [740, 980].forEach((frequency, index) => {
+            const osc = ctx.createOscillator();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(frequency, ctx.currentTime + index * 0.16);
+            osc.connect(gain);
+            osc.start(ctx.currentTime + index * 0.16);
+            osc.stop(ctx.currentTime + index * 0.16 + 0.14);
+          });
+          setTimeout(() => ctx.close(), 700);
+        } catch {}
+      }
+
+      async function lookupPin() {
+        const pin = pinInput.value.trim();
+        employee = null;
+        empName.textContent = "-";
+        empCode.textContent = "-";
+        empDept.textContent = "-";
+        if (pin.length < 4) {
+          setMessage("Apna PIN dalo. WFH/CL CMO approval ke liye pending rahega.");
+          return;
+        }
+
+        try {
+          const data = await callApi({ action: "employee", pin });
+          if (!data.ok) {
+            setMessage(data.error || "PIN galat hai.");
+            return;
+          }
+          employee = data.employee;
+          empName.textContent = employee.name || "-";
+          empCode.textContent = employee.code || "-";
+          empDept.textContent = employee.department || "-";
+          setMessage(`${employee.name} found. Date select karke attendance click karo.`);
+        } catch (error) {
+          setMessage(error.message);
+        }
+      }
+
+      async function submitAttendance(status) {
+        if (!employee) {
+          setMessage("Pehle valid PIN dalo.");
+          return;
+        }
+        document.querySelectorAll(".statusBtn").forEach((button) => (button.disabled = true));
+        try {
+          const data = await callApi({ action: "save", pin: pinInput.value.trim(), date: dateKey(selectedDay), status });
+          if (!data.ok) {
+            setMessage(data.error || "Attendance save nahi hui.");
+            return;
+          }
+          playDoneSound();
+          const suffix = data.approval === "Pending" ? "Pending for CMO approval" : "Approved";
+          setMessage(`${data.employee.name} ki ${dateKey(selectedDay)} ${statusLabels[status]} attendance lag gayi: ${suffix}`);
+        } catch (error) {
+          setMessage(error.message);
+        } finally {
+          document.querySelectorAll(".statusBtn").forEach((button) => (button.disabled = false));
+        }
+      }
+
+      async function loadAdminData() {
+        const adminPin = document.getElementById("adminPin").value.trim();
+        const adminMessage = document.getElementById("adminMessage");
+        try {
+          const data = await callApi({ action: "admin", pin: adminPin });
+          if (!data.ok) {
+            adminMessage.textContent = data.error || "Admin PIN galat hai.";
+            return;
+          }
+          rows = data.rows || [];
+          adminLogin.classList.add("hidden");
+          adminData.classList.remove("hidden");
+          document.getElementById("adminStatus").textContent = "Attendance loaded.";
+          renderAdmin();
+        } catch (error) {
+          adminMessage.textContent = error.message;
+        }
+      }
+
+      async function reviewEntry(targetPin, date, decision) {
+        const adminPin = document.getElementById("adminPin").value.trim();
+        document.getElementById("adminStatus").textContent = decision === "approve" ? "Approving..." : "Cancelling...";
+        const data = await callApi({ action: decision, adminPin, targetPin, date });
+        if (!data.ok) {
+          document.getElementById("adminStatus").textContent = data.error || "Action nahi hua.";
+          return;
+        }
+        document.getElementById("adminStatus").textContent = data.message || "Done.";
+        await loadAdminData();
+      }
+
+      function entryText(entry) {
+        if (!entry) return "";
+        if (entry.approval === "Pending") return `${entry.status} Pending`;
+        return entry.status;
+      }
+
+      function renderAdmin() {
+        const totals = rows.reduce(
+          (acc, row) => {
+            acc.WFH += row.counts.WFH;
+            acc.A += row.counts.A;
+            acc.CL += row.counts.CL;
+            acc.pending += row.pending || 0;
+            return acc;
+          },
+          { WFH: 0, A: 0, CL: 0, pending: 0 }
+        );
+        document.getElementById("kpiEmployees").textContent = rows.length;
+        document.getElementById("kpiWfh").textContent = totals.WFH;
+        document.getElementById("kpiAbsent").textContent = totals.A;
+        document.getElementById("kpiCl").textContent = totals.CL;
+        document.getElementById("kpiPending").textContent = totals.pending;
+
+        const table = document.getElementById("attendanceTable");
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th class="sticky">Code</th>
+              <th>Employee</th>
+              <th>Designation</th>
+              ${days.map((day) => `<th>${day}</th>`).join("")}
+              <th>WFH Approved</th>
+              <th>Absent</th>
+              <th>CL Approved</th>
+              <th>Pending</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr>
+                <td class="sticky">${row.code || "-"}</td>
+                <td>${row.name}</td>
+                <td>${row.department}</td>
+                ${days.map((day) => {
+                  const date = dateKey(day);
+                  const entry = row.days[date];
+                  const value = entryText(entry);
+                  const cls = entry?.approval === "Pending" ? "pending" : entry?.status || "blank";
+                  const reviewButtons = entry?.approval === "Pending"
+                    ? `<br><button class="approveBtn" data-action="approve" data-pin="${row.pin}" data-date="${date}" type="button">Approve</button><button class="cancelBtn" data-action="cancel" data-pin="${row.pin}" data-date="${date}" type="button">Cancel</button>`
+                    : "";
+                  return `<td><span class="pill ${cls}">${value || "-"}</span>${reviewButtons}</td>`;
+                }).join("")}
+                <td>${row.counts.WFH}</td>
+                <td>${row.counts.A}</td>
+                <td>${row.counts.CL}</td>
+                <td>${row.pending || 0}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        `;
+
+        document.querySelectorAll(".approveBtn,.cancelBtn").forEach((button) => {
+          button.addEventListener("click", () => reviewEntry(button.dataset.pin, button.dataset.date, button.dataset.action));
+        });
+      }
+
+      function downloadXls() {
+        const header = ["Employee Code", "Employee Name", "Designation", ...days.map((day) => `${day}-Aug`), "WFH Approved", "Absent Count", "CL Approved", "Pending Count"];
+        const body = rows.map((row) => [
+          row.code,
+          row.name,
+          row.department,
+          ...days.map((day) => entryText(row.days[dateKey(day)])),
+          row.counts.WFH,
+          row.counts.A,
+          row.counts.CL,
+          row.pending || 0,
+        ]);
+        const html = `
+          <html><head><meta charset="utf-8" />
+          <style>
+            table{border-collapse:collapse;font-family:Calibri,Arial,sans-serif}
+            th{background:#0f172a;color:#fff;font-weight:700}
+            th,td{border:1px solid #94a3b8;padding:6px 8px;text-align:center}
+            td:first-child,td:nth-child(2),td:nth-child(3){text-align:left}
+            .WFH{background:#dbeafe;color:#1d4ed8;font-weight:700}
+            .A{background:#fee2e2;color:#b91c1c;font-weight:700}
+            .CL{background:#fef3c7;color:#b45309;font-weight:700}
+            .PENDING{background:#fff7ed;color:#c2410c;font-weight:700}
+          </style></head><body>
+          <table>
+            <thead><tr>${header.map((cell) => `<th>${cell}</th>`).join("")}</tr></thead>
+            <tbody>${body.map((line) => `<tr>${line.map((cell) => {
+              const text = String(cell || "");
+              const cls = text.includes("Pending") ? "PENDING" : text;
+              return `<td class="${["WFH", "A", "CL", "PENDING"].includes(cls) ? cls : ""}">${text}</td>`;
+            }).join("")}</tr>`).join("")}</tbody>
+          </table></body></html>`;
+        const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "August_Attendance_2026.xls";
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      document.getElementById("titleButton").addEventListener("click", () => {
+        tapCount += 1;
+        clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => (tapCount = 0), 1200);
+        if (tapCount >= 5) {
+          tapCount = 0;
+          employeePanel.classList.add("hidden");
+          adminPanel.classList.remove("hidden");
+        }
+      });
+      document.getElementById("hideAdmin").addEventListener("click", () => {
+        adminPanel.classList.add("hidden");
+        employeePanel.classList.remove("hidden");
+      });
+      pinInput.addEventListener("input", lookupPin);
+      document.querySelectorAll(".statusBtn").forEach((button) => {
+        button.addEventListener("click", () => submitAttendance(button.dataset.status));
+      });
+      document.getElementById("loadAdmin").addEventListener("click", loadAdminData);
+      document.getElementById("refreshAdmin").addEventListener("click", loadAdminData);
+      document.getElementById("downloadExcel").addEventListener("click", downloadXls);
+      renderDays();
     </script>
   </body>
 </html>
