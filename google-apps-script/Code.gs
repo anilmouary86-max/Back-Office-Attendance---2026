@@ -50,6 +50,7 @@ function doGet(e) {
     else if (action === "admin") result = admin_(params.pin);
     else if (action === "approve") result = review_(params.adminPin, params.targetPin, params.date, "Approved");
     else if (action === "cancel") result = review_(params.adminPin, params.targetPin, params.date, "Cancelled");
+    else if (action === "clearAll") result = clearAll_(params.adminPin, params.confirm);
     else result = { ok: false, error: "Action valid nahi hai." };
   } catch (error) {
     result = { ok: false, error: String(error && error.message ? error.message : error) };
@@ -183,6 +184,25 @@ function review_(adminPin, targetPin, date, decision) {
   }
   if (found) return { ok: true, message: `${employee.name} ${date} ${currentStatus} ${decision}.` };
   return { ok: false, error: "Attendance record nahi mila." };
+}
+
+function clearAll_(adminPin, confirmText) {
+  if (String(adminPin || "").trim() !== ADMIN_PIN) return { ok: false, error: "Admin PIN galat hai." };
+  if (String(confirmText || "").trim().toUpperCase() !== "CLEAR") {
+    return { ok: false, error: "Clear karne ke liye CLEAR type karo." };
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Attendance");
+  if (!sheet) return { ok: true, message: "Attendance already clear hai.", cleared: 0 };
+
+  const lastRow = sheet.getLastRow();
+  const lastColumn = Math.max(sheet.getLastColumn(), 10);
+  if (lastRow <= 1) return { ok: true, message: "Attendance already clear hai.", cleared: 0 };
+
+  const cleared = lastRow - 1;
+  sheet.getRange(2, 1, cleared, lastColumn).clearContent();
+  return { ok: true, message: `${cleared} attendance records clear ho gaye.`, cleared };
 }
 
 function admin_(pin) {

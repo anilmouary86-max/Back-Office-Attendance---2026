@@ -198,6 +198,14 @@
       }
       .primary { background: var(--brand); color: #fff; }
       .secondary { background: #e2e8f0; color: var(--dark); }
+      .danger {
+        border: 0;
+        border-radius: 6px;
+        padding: 10px 13px;
+        background: #dc2626;
+        color: #fff;
+        font-weight: 900;
+      }
       .approveBtn {
         padding: 5px 8px;
         margin-top: 5px;
@@ -360,6 +368,7 @@
           <div class="panel actionBar">
             <button class="primary" id="downloadExcel" type="button">Download Excel</button>
             <button class="secondary" id="refreshAdmin" type="button">Refresh</button>
+            <button class="danger" id="clearAllAttendance" type="button">Clear All Attendance</button>
             <span id="adminStatus">Attendance loaded.</span>
           </div>
           <div class="tableWrap">
@@ -380,6 +389,8 @@
       let tapTimer = null;
       let lastEmployeeStatusKey = "";
       let employeeStatusTimer = null;
+      let audioCtx = null;
+      let soundReady = false;
 
       const pinInput = document.getElementById("pin");
       const empName = document.getElementById("empName");
@@ -445,27 +456,61 @@
       function playDoneSound() {
         try {
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-          const ctx = new AudioContextClass();
+          const ctx = audioCtx || new AudioContextClass();
+          audioCtx = ctx;
+          if (ctx.state === "suspended") ctx.resume();
           const gain = ctx.createGain();
           gain.connect(ctx.destination);
           gain.gain.setValueAtTime(0.001, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
-          [740, 980].forEach((frequency, index) => {
+          gain.gain.exponentialRampToValueAtTime(0.32, ctx.currentTime + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+          [740, 980, 1180].forEach((frequency, index) => {
             const osc = ctx.createOscillator();
             osc.type = "sine";
-            osc.frequency.setValueAtTime(frequency, ctx.currentTime + index * 0.16);
+            osc.frequency.setValueAtTime(frequency, ctx.currentTime + index * 0.28);
             osc.connect(gain);
-            osc.start(ctx.currentTime + index * 0.16);
-            osc.stop(ctx.currentTime + index * 0.16 + 0.14);
+            osc.start(ctx.currentTime + index * 0.28);
+            osc.stop(ctx.currentTime + index * 0.28 + 0.22);
           });
-          setTimeout(() => ctx.close(), 700);
+        } catch {}
+      }
+
+      function unlockApprovalSound() {
+        if (soundReady) return;
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          audioCtx = audioCtx || new AudioContextClass();
+          if (audioCtx.state === "suspended") audioCtx.resume();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.03);
+          soundReady = true;
+        } catch {}
+      }
+
+      function notifyEmployeeDecision(entry) {
+        playDoneSound();
+        setTimeout(playDoneSound, 450);
+        if (navigator.vibrate) navigator.vibrate([250, 120, 250]);
+        try {
+          if ("speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+            const text = entry.approval === "Approved" ? `${statusLabels[entry.status] || entry.status} approved ho chuki hai` : `${statusLabels[entry.status] || entry.status} cancel ho chuki hai`;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = "hi-IN";
+            utterance.rate = 0.95;
+            window.speechSynthesis.speak(utterance);
+          }
         } catch {}
       }
 
       function startEmployeeStatusTimer() {
         clearInterval(employeeStatusTimer);
-        employeeStatusTimer = setInterval(() => refreshEmployeeStatus(true), 15000);
+        employeeStatusTimer = setInterval(() => refreshEmployeeStatus(true), 5000);
       }
 
       function employeeStatusText(entry) {
@@ -502,7 +547,7 @@
           const entry = data.entry || null;
           const key = entry ? `${selectedDay}|${entry.status}|${entry.approval}|${entry.reviewedAt || ""}` : `${selectedDay}|blank`;
           if (notify && lastEmployeeStatusKey && key !== lastEmployeeStatusKey && entry && entry.approval !== "Pending") {
-            playDoneSound();
+            notifyEmployeeDecision(entry);
             setMessage(employeeStatusText(entry));
           }
           lastEmployeeStatusKey = key;
@@ -596,6 +641,23 @@
           return;
         }
         document.getElementById("adminStatus").textContent = data.message || "Done.";
+        await loadAdminData();
+      }
+
+      async function clearAllAttendance() {
+        const confirmText = window.prompt("Saari attendance clear karni hai? Confirm ke liye CLEAR type karo.");
+        if (confirmText !== "CLEAR") {
+          document.getElementById("adminStatus").textContent = "Clear cancel ho gaya.";
+          return;
+        }
+        const adminPin = document.getElementById("adminPin").value.trim();
+        document.getElementById("adminStatus").textContent = "Clearing attendance...";
+        const data = await callApi({ action: "clearAll", adminPin, confirm: "CLEAR" });
+        if (!data.ok) {
+          document.getElementById("adminStatus").textContent = data.error || "Clear nahi hua.";
+          return;
+        }
+        document.getElementById("adminStatus").textContent = data.message || "Attendance clear ho gayi.";
         await loadAdminData();
       }
 
@@ -735,6 +797,7 @@
       }
 
       document.getElementById("titleButton").addEventListener("click", () => {
+        unlockApprovalSound();
         tapCount += 1;
         clearTimeout(tapTimer);
         tapTimer = setTimeout(() => (tapCount = 0), 1200);
@@ -749,12 +812,16 @@
         employeePanel.classList.remove("hidden");
       });
       pinInput.addEventListener("input", lookupPin);
+      pinInput.addEventListener("focus", unlockApprovalSound);
+      document.addEventListener("click", unlockApprovalSound);
+      document.addEventListener("touchstart", unlockApprovalSound, { once: false });
       document.querySelectorAll(".statusBtn").forEach((button) => {
         button.addEventListener("click", () => submitAttendance(button.dataset.status));
       });
       document.getElementById("loadAdmin").addEventListener("click", loadAdminData);
       document.getElementById("refreshAdmin").addEventListener("click", loadAdminData);
       document.getElementById("downloadExcel").addEventListener("click", downloadXls);
+      document.getElementById("clearAllAttendance").addEventListener("click", clearAllAttendance);
       renderDays();
     </script>
   </body>
